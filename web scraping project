@@ -1,0 +1,50 @@
+import requests
+from bs4 import BeautifulSoup
+import csv
+import re
+
+# URL of the website to scrape
+URL = "https://remoteok.io/remote-dev-jobs"
+
+# Headers to simulate a browser visit
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36"
+}
+
+# Function to extract job information from the page
+def get_job_data():
+    response = requests.get(URL, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    jobs = []
+    job_cards = soup.find_all('tr', class_='job')
+
+    for job in job_cards:
+        try:
+            title = job.find('h2').text.strip()
+            company = job.find('h3').text.strip()
+            location = job.find('div', class_='location').text.strip() if job.find('div', class_='location') else 'Remote'
+            salary = job.find(text=re.compile(r'\$\d+,\d+')) if job.find(text=re.compile(r'\$\d+,\d+')) else 'N/A'
+            link = "https://remoteok.io" + job['data-href']
+
+            jobs.append([title, company, location, salary, link])
+        except AttributeError:
+            continue
+
+    return jobs
+
+# Function to save data to CSV
+def save_to_csv(jobs):
+    with open("remote_jobs.csv", mode="w", newline='', encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Job Title", "Company", "Location", "Salary", "Link"])
+        writer.writerows(jobs)
+    print("Data saved to remote_jobs.csv")
+
+# Main function to execute the scraper
+def main():
+    jobs = get_job_data()
+    save_to_csv(jobs)
+
+if __name__ == "__main__":
+    main()
